@@ -1,5 +1,4 @@
-import datetime
-import sys, os
+import datetime, sys, os
 
 def get_zone_handles(state):
     global zone_names
@@ -152,7 +151,6 @@ def get_sensor_value(state):
         sensor_values['Damper_Position'].append(
             ep_api.exchange.get_variable_value(state, allHandles['sensor']['Damper_Position'][i]))
     return sensor_values
-
 def set_actuators(state, actuator_values):
     ep_api.exchange.set_actuator_value(state, allHandles['actuator']['Chiler_SET_C'], actuator_values['Chiler_SET_C'])
     ep_api.exchange.set_actuator_value(state, allHandles['actuator']['Boiler_SET_C'], actuator_values['Boiler_SET_C'])
