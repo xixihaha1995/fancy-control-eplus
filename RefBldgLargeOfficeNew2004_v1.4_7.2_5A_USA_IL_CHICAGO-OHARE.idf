@@ -9603,6 +9603,16 @@
 
   Output:Variable,
     *,                       !- Key Value
+    Zone Air Terminal VAV Damper Position,    !- Variable Name
+    timestep;                !- Reporting Frequency
+
+Output:Variable,
+    *,                       !- Key Value
+    Zone Thermostat Air Temperature,    !- Variable Name
+    timestep;                !- Reporting Frequency
+
+  Output:Variable,
+    *,                       !- Key Value
     Zone Air Temperature,    !- Variable Name
     timestep;                !- Reporting Frequency
 
@@ -9629,6 +9639,11 @@
     Output:Variable,
     *,                       !- Key Value
     Boiler Outlet Temperature,    !- Variable Name
+    timestep;                !- Reporting Frequency
+
+Output:Variable,
+    *,                       !- Key Value
+    Facility Total HVAC Electricity Demand Rate,    !- Variable Name
     timestep;                !- Reporting Frequency
 
   Output:Meter,Electricity:Facility,hourly;

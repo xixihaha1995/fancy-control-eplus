@@ -4250,66 +4250,86 @@ OutputVariable,Electric Equipment Electricity Energy,PERIMETER_TOP_ZN_4_PLUGMISC
 OutputVariable,Zone Air System Sensible Heating Energy,BASEMENT
 OutputVariable,Zone Air System Sensible Cooling Energy,BASEMENT
 OutputVariable,Zone Air Temperature,BASEMENT
+OutputVariable,Zone Thermostat Air Temperature,BASEMENT
 OutputVariable,Zone Air System Sensible Heating Energy,CORE_BOTTOM
 OutputVariable,Zone Air System Sensible Cooling Energy,CORE_BOTTOM
 OutputVariable,Zone Air Temperature,CORE_BOTTOM
+OutputVariable,Zone Thermostat Air Temperature,CORE_BOTTOM
 OutputVariable,Zone Air System Sensible Heating Energy,CORE_MID
 OutputVariable,Zone Air System Sensible Cooling Energy,CORE_MID
 OutputVariable,Zone Air Temperature,CORE_MID
+OutputVariable,Zone Thermostat Air Temperature,CORE_MID
 OutputVariable,Zone Air System Sensible Heating Energy,CORE_TOP
 OutputVariable,Zone Air System Sensible Cooling Energy,CORE_TOP
 OutputVariable,Zone Air Temperature,CORE_TOP
+OutputVariable,Zone Thermostat Air Temperature,CORE_TOP
 OutputVariable,Zone Air System Sensible Heating Energy,GROUNDFLOOR_PLENUM
 OutputVariable,Zone Air System Sensible Cooling Energy,GROUNDFLOOR_PLENUM
 OutputVariable,Zone Air Temperature,GROUNDFLOOR_PLENUM
+OutputVariable,Zone Thermostat Air Temperature,GROUNDFLOOR_PLENUM
 OutputVariable,Zone Air System Sensible Heating Energy,MIDFLOOR_PLENUM
 OutputVariable,Zone Air System Sensible Cooling Energy,MIDFLOOR_PLENUM
 OutputVariable,Zone Air Temperature,MIDFLOOR_PLENUM
+OutputVariable,Zone Thermostat Air Temperature,MIDFLOOR_PLENUM
 OutputVariable,Zone Air System Sensible Heating Energy,PERIMETER_BOT_ZN_1
 OutputVariable,Zone Air System Sensible Cooling Energy,PERIMETER_BOT_ZN_1
 OutputVariable,Zone Air Temperature,PERIMETER_BOT_ZN_1
+OutputVariable,Zone Thermostat Air Temperature,PERIMETER_BOT_ZN_1
 OutputVariable,Zone Air System Sensible Heating Energy,PERIMETER_BOT_ZN_2
 OutputVariable,Zone Air System Sensible Cooling Energy,PERIMETER_BOT_ZN_2
 OutputVariable,Zone Air Temperature,PERIMETER_BOT_ZN_2
+OutputVariable,Zone Thermostat Air Temperature,PERIMETER_BOT_ZN_2
 OutputVariable,Zone Air System Sensible Heating Energy,PERIMETER_BOT_ZN_3
 OutputVariable,Zone Air System Sensible Cooling Energy,PERIMETER_BOT_ZN_3
 OutputVariable,Zone Air Temperature,PERIMETER_BOT_ZN_3
+OutputVariable,Zone Thermostat Air Temperature,PERIMETER_BOT_ZN_3
 OutputVariable,Zone Air System Sensible Heating Energy,PERIMETER_BOT_ZN_4
 OutputVariable,Zone Air System Sensible Cooling Energy,PERIMETER_BOT_ZN_4
 OutputVariable,Zone Air Temperature,PERIMETER_BOT_ZN_4
+OutputVariable,Zone Thermostat Air Temperature,PERIMETER_BOT_ZN_4
 OutputVariable,Zone Air System Sensible Heating Energy,PERIMETER_MID_ZN_1
 OutputVariable,Zone Air System Sensible Cooling Energy,PERIMETER_MID_ZN_1
 OutputVariable,Zone Air Temperature,PERIMETER_MID_ZN_1
+OutputVariable,Zone Thermostat Air Temperature,PERIMETER_MID_ZN_1
 OutputVariable,Zone Air System Sensible Heating Energy,PERIMETER_MID_ZN_2
 OutputVariable,Zone Air System Sensible Cooling Energy,PERIMETER_MID_ZN_2
 OutputVariable,Zone Air Temperature,PERIMETER_MID_ZN_2
+OutputVariable,Zone Thermostat Air Temperature,PERIMETER_MID_ZN_2
 OutputVariable,Zone Air System Sensible Heating Energy,PERIMETER_MID_ZN_3
 OutputVariable,Zone Air System Sensible Cooling Energy,PERIMETER_MID_ZN_3
 OutputVariable,Zone Air Temperature,PERIMETER_MID_ZN_3
+OutputVariable,Zone Thermostat Air Temperature,PERIMETER_MID_ZN_3
 OutputVariable,Zone Air System Sensible Heating Energy,PERIMETER_MID_ZN_4
 OutputVariable,Zone Air System Sensible Cooling Energy,PERIMETER_MID_ZN_4
 OutputVariable,Zone Air Temperature,PERIMETER_MID_ZN_4
+OutputVariable,Zone Thermostat Air Temperature,PERIMETER_MID_ZN_4
 OutputVariable,Zone Air System Sensible Heating Energy,PERIMETER_TOP_ZN_1
 OutputVariable,Zone Air System Sensible Cooling Energy,PERIMETER_TOP_ZN_1
 OutputVariable,Zone Air Temperature,PERIMETER_TOP_ZN_1
+OutputVariable,Zone Thermostat Air Temperature,PERIMETER_TOP_ZN_1
 OutputVariable,Zone Air System Sensible Heating Energy,PERIMETER_TOP_ZN_2
 OutputVariable,Zone Air System Sensible Cooling Energy,PERIMETER_TOP_ZN_2
 OutputVariable,Zone Air Temperature,PERIMETER_TOP_ZN_2
+OutputVariable,Zone Thermostat Air Temperature,PERIMETER_TOP_ZN_2
 OutputVariable,Zone Air System Sensible Heating Energy,PERIMETER_TOP_ZN_3
 OutputVariable,Zone Air System Sensible Cooling Energy,PERIMETER_TOP_ZN_3
 OutputVariable,Zone Air Temperature,PERIMETER_TOP_ZN_3
+OutputVariable,Zone Thermostat Air Temperature,PERIMETER_TOP_ZN_3
 OutputVariable,Zone Air System Sensible Heating Energy,PERIMETER_TOP_ZN_4
 OutputVariable,Zone Air System Sensible Cooling Energy,PERIMETER_TOP_ZN_4
 OutputVariable,Zone Air Temperature,PERIMETER_TOP_ZN_4
+OutputVariable,Zone Thermostat Air Temperature,PERIMETER_TOP_ZN_4
 OutputVariable,Zone Air System Sensible Heating Energy,TOPFLOOR_PLENUM
 OutputVariable,Zone Air System Sensible Cooling Energy,TOPFLOOR_PLENUM
 OutputVariable,Zone Air Temperature,TOPFLOOR_PLENUM
+OutputVariable,Zone Thermostat Air Temperature,TOPFLOOR_PLENUM
 OutputVariable,Water Use Connections Plant Hot Water Energy,CORE_BOTTOM WATER EQUIPMENT
 OutputVariable,Water Use Connections Plant Hot Water Energy,CORE_MID WATER EQUIPMENT
 OutputVariable,Water Use Connections Plant Hot Water Energy,CORE_TOP WATER EQUIPMENT
 OutputVariable,Facility Total Purchased Electricity Energy,WHOLE BUILDING
 OutputVariable,Facility Total Surplus Electricity Energy,WHOLE BUILDING
 OutputVariable,Facility Net Purchased Electricity Energy,WHOLE BUILDING
+OutputVariable,Facility Total HVAC Electricity Demand Rate,WHOLE BUILDING
 OutputVariable,Heating Coil Heating Energy,BASEMENT VAV BOX REHEAT COIL
 OutputVariable,Heating Coil Source Side Heat Transfer Energy,BASEMENT VAV BOX REHEAT COIL
 OutputVariable,Heating Coil Heating Energy,CORE_BOTTOM VAV BOX REHEAT COIL
@@ -4358,6 +4378,22 @@ OutputVariable,Cooling Coil Total Cooling Energy,VAV_1_COOLC
 OutputVariable,Cooling Coil Source Side Heat Transfer Energy,VAV_1_COOLC
 OutputVariable,Cooling Coil Total Cooling Energy,VAV_5_COOLC
 OutputVariable,Cooling Coil Source Side Heat Transfer Energy,VAV_5_COOLC
+OutputVariable,Zone Air Terminal VAV Damper Position,BASEMENT VAV BOX COMPONENT
+OutputVariable,Zone Air Terminal VAV Damper Position,CORE_BOTTOM VAV BOX COMPONENT
+OutputVariable,Zone Air Terminal VAV Damper Position,CORE_MID VAV BOX COMPONENT
+OutputVariable,Zone Air Terminal VAV Damper Position,CORE_TOP VAV BOX COMPONENT
+OutputVariable,Zone Air Terminal VAV Damper Position,PERIMETER_BOT_ZN_1 VAV BOX COMPONENT
+OutputVariable,Zone Air Terminal VAV Damper Position,PERIMETER_BOT_ZN_2 VAV BOX COMPONENT
+OutputVariable,Zone Air Terminal VAV Damper Position,PERIMETER_BOT_ZN_3 VAV BOX COMPONENT
+OutputVariable,Zone Air Terminal VAV Damper Position,PERIMETER_BOT_ZN_4 VAV BOX COMPONENT
+OutputVariable,Zone Air Terminal VAV Damper Position,PERIMETER_MID_ZN_1 VAV BOX COMPONENT
+OutputVariable,Zone Air Terminal VAV Damper Position,PERIMETER_MID_ZN_2 VAV BOX COMPONENT
+OutputVariable,Zone Air Terminal VAV Damper Position,PERIMETER_MID_ZN_3 VAV BOX COMPONENT
+OutputVariable,Zone Air Terminal VAV Damper Position,PERIMETER_MID_ZN_4 VAV BOX COMPONENT
+OutputVariable,Zone Air Terminal VAV Damper Position,PERIMETER_TOP_ZN_1 VAV BOX COMPONENT
+OutputVariable,Zone Air Terminal VAV Damper Position,PERIMETER_TOP_ZN_2 VAV BOX COMPONENT
+OutputVariable,Zone Air Terminal VAV Damper Position,PERIMETER_TOP_ZN_3 VAV BOX COMPONENT
+OutputVariable,Zone Air Terminal VAV Damper Position,PERIMETER_TOP_ZN_4 VAV BOX COMPONENT
 OutputVariable,Fan Electricity Energy,VAV_1_FAN
 OutputVariable,Fan Electricity Energy,VAV_2_FAN
 OutputVariable,Fan Electricity Energy,VAV_3_FAN

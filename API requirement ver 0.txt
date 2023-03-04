@@ -1,0 +1,46 @@
+Docu original date: 02/27/2023
+Docu edition: ver 0, initial draft
+Draft: Zejian Zhou
+Purpose: Describe the API requirement to connect to the HVAC simulator. 
+
++API description:
+
+I assume Python is being used. 
+
+"get" functions: 
+	- Descritpion: Get new state ("get" functions). I will call this function and expect the states being returned. You can return different states by different funcitons or return an array or return in a tuple.
+	- Required output: 
+		current energy consumption (power, unit Watt) - data type (float, double, ndarray (1x1), or PyTorch tensor (1x1))
+		current room temperature - output data type (float, double, ndarray (1x1), or PyTorch tensor (1x1))
+		current chiller setpoint - output data type (float, double, ndarray (1x1), or PyTorch tensor (1x1))
+		current boiler setpoint - output data type (float, double, ndarray (1x1), or PyTorch tensor (1x1))
+		current damper setpoint - output data type (float, double, ndarray (1x1), or PyTorch tensor (1x1))
+		current outdoor temperature - output data type (float, double, ndarray (1x1), or PyTorch tensor (1x1))
+		target room temperature - output data type (float, double, ndarray (1x1), or PyTorch tensor (1x1))
+	- Comment: the name of the funciton can be customized by you
+	- Example function on your side: 
+		def get_room_temperature():
+			room_temperature = .... # your code
+			return room_temperature
+	- On my side:
+		room_temperature = get_room_temperature()
+
+"set" functions: 
+	- Description: Set the new setpoints for the chiller, boiler, and damper ("set" functions).
+	- Required input:
+		current chiller setpoint - input data type (double)
+		current boiler setpoint - input data type (double)
+		current damper setpoint - input data type (double)
+		current outdoor temperature - input data type (double)
+	- Example function on your side: 
+		def set_chiller_setpoint(setpoint):
+			.... # your code to set the chiller setpoint at "setpoint".
+	- On my side:
+		set_chiller_setpoint(setpoint)
+
++Type of connection:
+	Option 1: I install a simulator. 
+	Option 2: Set remote access from my end to your end. Possibly SSH or if you have a server. 
+
++general comments:
+	Let's try to see if these information are enough to construct an RL agent. 

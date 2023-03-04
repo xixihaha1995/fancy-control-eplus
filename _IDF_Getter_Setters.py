@@ -18,34 +18,42 @@ def get_zone_handles(state):
                   'Perimeter_top_ZN_2',
                   'Perimeter_top_ZN_3',
                   'Perimeter_top_ZN_4']
+    '''
+    OutputVariable	Zone Air Terminal VAV Damper Position	BASEMENT VAV BOX COMPONENT
+    OutputVariable	Zone Air System Sensible Heating Energy	BASEMENT	
+	
+        
+    #Actuator	System Node Setpoint	Mass Flow Rate Setpoint	BASEMENT VAV BOX DAMPER NODE;
+    Actuator	System Node Setpoint	Mass Flow Rate Setpoint	BASEMENT VAV BOX OUTLET NODE NAME;
+
+    '''
     zone_temp_c = []
+    zone_target_temp_c = []
     zone_damper_pos_sensor = []
     zone_damper_pos_actuator = []
     for zone in zone_names:
-        _tmp = ep_api.exchange.get_variable_handle(state,
+        _tmpRtemp = ep_api.exchange.get_variable_handle(state,
                                                    "Zone Air Temperature",
                                                    zone)
-        if _tmp < 0:
-            raise Exception("Error: Invalid handle")
-        zone_temp_c.append(_tmp)
+        _tmpTtemp = ep_api.exchange.get_variable_handle(state,
+                                                   "Zone Thermostat Air Temperature",
+                                                   zone)
+        _tmpDPosSensor = ep_api.exchange.get_variable_handle(state,
+                                                    "Zone Air Terminal VAV Damper Position",
+                                                    zone+" VAV BOX COMPONENT")
+        _tmpDPosActuator = ep_api.exchange.get_actuator_handle(state,
+                                                    "System Node Setpoint",
+                                                    "Mass Flow Rate Setpoint",
+                                                    zone+" VAV BOX OUTLET NODE NAME")
 
-    for i in [1,2,3,5]:
-        _tmp = ep_api.exchange.get_variable_handle(state,
-                                                   "Air System Outdoor Air Flow Fraction",
-                                                   "VAV_"+str(i))
-        if _tmp < 0:
-            raise Exception("Error: Invalid handle")
-        zone_damper_pos_sensor.append(_tmp)
+        if _tmpRtemp * _tmpTtemp * _tmpDPosSensor * _tmpDPosActuator < 0:
+            raise Exception("Error: Invalid handle for zone: "+zone)
+        zone_temp_c.append(_tmpRtemp)
+        zone_target_temp_c.append(_tmpTtemp)
+        zone_damper_pos_sensor.append(_tmpDPosSensor)
+        zone_damper_pos_actuator.append(_tmpDPosActuator)
 
-        _tmp = ep_api.exchange.get_actuator_handle(state,
-                                                   "System Node Setpoint",
-                                                   "Mass Flow Rate Setpoint",
-                                                   "VAV_"+str(i)+"_OAINLET NODE")
-        if _tmp < 0:
-            raise Exception("Error: Invalid handle")
-        zone_damper_pos_actuator.append(_tmp)
-
-    return zone_temp_c, zone_damper_pos_sensor, zone_damper_pos_actuator
+    return zone_temp_c, zone_target_temp_c, zone_damper_pos_sensor, zone_damper_pos_actuator
 
 def get_building_handles(state):
     '''
@@ -74,28 +82,25 @@ def get_building_handles(state):
 
     allHandles['sensor']['OAT_C'] = 0
     allHandles['sensor']['RH_percent'] = 0
-    allHandles['sensor']['EnergyConsumption_Watts'] = {}
-    allHandles['sensor']['EnergyConsumption_Watts']['Chiler'] = 0
-    allHandles['sensor']['EnergyConsumption_Watts']['Boiler'] = 0
+    allHandles['sensor']['hvac_electricity_watts'] = 0
     allHandles['sensor']['Chiler_SET_C'] = 0
     allHandles['sensor']['Boiler_SET_C'] = 0
     allHandles['sensor']['room_temp_c'] = []
     allHandles['sensor']['Damper_Position'] = []
+    allHandles['sensor']['room_target_temp_c'] = []
 
     allHandles['actuator']['Damper_Position'] = []
     allHandles['actuator']['Chiler_SET_C'] = 0
     allHandles['actuator']['Boiler_SET_C'] = 0
+    allHandles['actuator']['OAT_C'] = 0
+    allHandles['actuator']['RH_percent'] = 0
 
     oat_c = ep_api.exchange.get_variable_handle(state,"Site Outdoor Air Drybulb Temperature",
                                                                              "Environment")
     rh_percent = ep_api.exchange.get_variable_handle(state,"Site Outdoor Air Humidity Ratio",
                                                                              "Environment")
-    chill_watts = ep_api.exchange.get_variable_handle(state,
-                                                      "Chiller Electricity Rate",
-                                                      "COOLSYS1 CHILLER 1")
-    boiler_watts = ep_api.exchange.get_variable_handle(state,
-                                                         "Boiler Heating Rate",
-                                                         "HEATSYS1 BOILER")
+    hvac_electricity = ep_api.exchange.get_variable_handle(state,"Facility Total HVAC Electricity Demand Rate",
+                                                                                "WHOLE BUILDING")
     chiler_set_c_sensor = ep_api.exchange.get_variable_handle(state,
                                                        "Chiller Evaporator Outlet Temperature",
                                                        "COOLSYS1 CHILLER 1")
@@ -110,52 +115,65 @@ def get_building_handles(state):
                                                         "System Node Setpoint",
                                                         "Temperature Setpoint",
                                                         "HEATSYS1 SUPPLY EQUIPMENT OUTLET NODE")
-    if oat_c * rh_percent * chill_watts * boiler_watts * \
+    odb_actuator_handle = ep_api.exchange.get_actuator_handle(state,
+                                                              "Weather Data", "Outdoor Dry Bulb", "Environment")
+    orh_actuator_handle = ep_api.exchange.get_actuator_handle(state,
+                                                              "Weather Data", "Outdoor Relative Humidity", "Environment")
+    if oat_c * rh_percent * hvac_electricity* \
             chiler_set_c_sensor * boiler_set_c_sensor * \
-            chiler_set_c_actuator * boiler_set_c_actuator < 0:
+            chiler_set_c_actuator * boiler_set_c_actuator * \
+            odb_actuator_handle * orh_actuator_handle < 0:
         raise Exception("Error: Invalid handle")
 
-    zone_temp_c, zone_damper_pos_sensor, zone_damper_pos_actuator = get_zone_handles(state)
-    allHandles['sensor']['OAT_C'] = oat_c
-    allHandles['sensor']['RH_percent'] = rh_percent
-    allHandles['sensor']['EnergyConsumption_Watts']['Chiler'] = chill_watts
-    allHandles['sensor']['EnergyConsumption_Watts']['Boiler'] = boiler_watts
+    zone_temp_c, zone_target_temp_c, zone_damper_pos_sensor, zone_damper_pos_actuator = get_zone_handles(state)
+
+    allHandles['sensor']['hvac_electricity_watts'] = hvac_electricity
+    allHandles['sensor']['room_temp_c'] = zone_temp_c
     allHandles['sensor']['Chiler_SET_C'] = chiler_set_c_sensor
     allHandles['sensor']['Boiler_SET_C'] = boiler_set_c_sensor
-    allHandles['sensor']['room_temp_c'] = zone_temp_c
     allHandles['sensor']['Damper_Position'] = zone_damper_pos_sensor
-    allHandles['actuator']['Damper_Position'] = zone_damper_pos_actuator
+    allHandles['sensor']['OAT_C'] = oat_c
+    allHandles['sensor']['RH_percent'] = rh_percent
+    allHandles['sensor']['room_target_temp_c'] = zone_target_temp_c
+
     allHandles['actuator']['Chiler_SET_C'] = chiler_set_c_actuator
     allHandles['actuator']['Boiler_SET_C'] = boiler_set_c_actuator
+    allHandles['actuator']['Damper_Position'] = zone_damper_pos_actuator
+    allHandles['actuator']['OAT_C'] = odb_actuator_handle
+    allHandles['actuator']['RH_percent'] = orh_actuator_handle
 
 def get_sensor_value(state):
     time_in_hours = ep_api.exchange.current_sim_time(state)
     _readable_time = datetime.timedelta(hours=time_in_hours)
     print('Time: ', _readable_time)
     sensor_values = {}
-    sensor_values['OAT_C'] = ep_api.exchange.get_variable_value(state, allHandles['sensor']['OAT_C'])
-    sensor_values['RH_percent'] = ep_api.exchange.get_variable_value(state, allHandles['sensor']['RH_percent'])
-    sensor_values['EnergyConsumption_Watts'] = {}
-    sensor_values['EnergyConsumption_Watts']['Chiler'] = \
-        ep_api.exchange.get_variable_value(state, allHandles['sensor']['EnergyConsumption_Watts']['Chiler'])
-    sensor_values['EnergyConsumption_Watts']['Boiler'] = \
-        ep_api.exchange.get_variable_value(state, allHandles['sensor']['EnergyConsumption_Watts']['Boiler'])
-    sensor_values['Chiler_SET_C'] = ep_api.exchange.get_variable_value(state, allHandles['sensor']['Chiler_SET_C'])
-    sensor_values['Boiler_SET_C'] = ep_api.exchange.get_variable_value(state, allHandles['sensor']['Boiler_SET_C'])
+    sensor_values['hvac_electricity_watts'] = ep_api.exchange.get_variable_value(state,
+                                                                           allHandles['sensor']['hvac_electricity_watts'])
     sensor_values['room_temp_c'] = []
-    sensor_values['Damper_Position'] = []
     for i in range(len(allHandles['sensor']['room_temp_c'])):
         sensor_values['room_temp_c'].append(
             ep_api.exchange.get_variable_value(state, allHandles['sensor']['room_temp_c'][i]))
+    sensor_values['Chiler_SET_C'] = ep_api.exchange.get_variable_value(state, allHandles['sensor']['Chiler_SET_C'])
+    sensor_values['Boiler_SET_C'] = ep_api.exchange.get_variable_value(state, allHandles['sensor']['Boiler_SET_C'])
+    sensor_values['Damper_Position'] = []
     for i in range(len(allHandles['sensor']['Damper_Position'])):
         sensor_values['Damper_Position'].append(
             ep_api.exchange.get_variable_value(state, allHandles['sensor']['Damper_Position'][i]))
+    sensor_values['OAT_C'] = ep_api.exchange.get_variable_value(state, allHandles['sensor']['OAT_C'])
+    sensor_values['RH_percent'] = ep_api.exchange.get_variable_value(state, allHandles['sensor']['RH_percent'])
+    sensor_values['room_target_temp_c'] = []
+    for i in range(len(allHandles['sensor']['room_target_temp_c'])):
+        sensor_values['room_target_temp_c'].append(
+            ep_api.exchange.get_variable_value(state, allHandles['sensor']['room_target_temp_c'][i]))
+
     return sensor_values
-def set_actuators(state, actuator_values):
-    ep_api.exchange.set_actuator_value(state, allHandles['actuator']['Chiler_SET_C'], actuator_values['Chiler_SET_C'])
-    ep_api.exchange.set_actuator_value(state, allHandles['actuator']['Boiler_SET_C'], actuator_values['Boiler_SET_C'])
+def set_actuators(state, to_set):
+    ep_api.exchange.set_actuator_value(state, allHandles['actuator']['Chiler_SET_C'], to_set['Chiler_SET_C'])
+    ep_api.exchange.set_actuator_value(state, allHandles['actuator']['Boiler_SET_C'], to_set['Boiler_SET_C'])
+    ep_api.exchange.set_actuator_value(state, allHandles['actuator']['OAT_C'], to_set['OAT_C'])
+    ep_api.exchange.set_actuator_value(state, allHandles['actuator']['RH_percent'], to_set['RH_percent'])
     for i in range(len(allHandles['actuator']['Damper_Position'])):
-        ep_api.exchange.set_actuator_value(state, allHandles['actuator']['Damper_Position'][i], actuator_values['Damper_Position'][i])
+        ep_api.exchange.set_actuator_value(state, allHandles['actuator']['Damper_Position'][i], to_set['Damper_Position'][i])
 def api_to_csv(state):
     orig = ep_api.exchange.list_available_api_data_csv(state)
     newFileByteArray = bytearray(orig)
