@@ -21,11 +21,8 @@ def get_zone_handles(state):
     '''
     OutputVariable	Zone Air Terminal VAV Damper Position	BASEMENT VAV BOX COMPONENT
     OutputVariable	Zone Air System Sensible Heating Energy	BASEMENT	
-	
-        
     #Actuator	System Node Setpoint	Mass Flow Rate Setpoint	BASEMENT VAV BOX DAMPER NODE;
     Actuator	System Node Setpoint	Mass Flow Rate Setpoint	BASEMENT VAV BOX OUTLET NODE NAME;
-
     '''
     zone_temp_c = []
     zone_target_temp_c = []
@@ -60,20 +57,13 @@ def get_building_handles(state):
     Time, OAT, RH, Damper_Position, Demand_Watts, Chiler_SET_C, Boiler_SET_C
     HVAC,Average,Chiller Electricity Rate [W]
     HVAC,Average,Boiler Heating Rate [W]
-
     HVAC,Average,Chiller Evaporator Outlet Temperature [C]
     HVAC,Average,Boiler Outlet Temperature [C]
 
     Damper_Position, Chiler_SET_C, Boiler_SET_C
     Actuator	System Node Setpoint	Temperature Setpoint	HEATSYS1 SUPPLY EQUIPMENT OUTLET NODE;
     Actuator	System Node Setpoint	Temperature Setpoint	COOLSYS1 SUPPLY EQUIPMENT OUTLET NODE 1;
-
     OutputVariable	Zone Air Temperature	BASEMENT
-    OutputVariable	Air System Outdoor Air Flow Fraction	VAV_1
-    OutputVariable	Air System Outdoor Air Flow Fraction	VAV_2
-    OutputVariable	Air System Outdoor Air Flow Fraction	VAV_3
-    OutputVariable	Air System Outdoor Air Flow Fraction	VAV_5
-    Actuator	System Node Setpoint	Mass Flow Rate Setpoint	VAV_1_OAINLET NODE;
     '''
     global allHandles
     allHandles = {}
@@ -141,7 +131,6 @@ def get_building_handles(state):
     allHandles['actuator']['Damper_Position'] = zone_damper_pos_actuator
     allHandles['actuator']['OAT_C'] = odb_actuator_handle
     allHandles['actuator']['RH_percent'] = orh_actuator_handle
-
 def get_sensor_value(state):
     time_in_hours = ep_api.exchange.current_sim_time(state)
     _readable_time = datetime.timedelta(hours=time_in_hours)
