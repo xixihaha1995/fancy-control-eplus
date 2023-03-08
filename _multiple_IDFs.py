@@ -1,5 +1,5 @@
 import datetime, sys, os, threading
-import time
+import time, random
 from multiprocessing import Barrier
 
 sys.path.insert(0, '/usr/local/EnergyPlus-22-1-0/')
@@ -140,8 +140,8 @@ def get_building_handles(state):
     allHandles['actuator']['RH_percent'] = orh_actuator_handle
 def get_sensor_value(state):
     time_in_hours = ep_api.exchange.current_sim_time(state)
-    # _readable_time = datetime.timedelta(hours=time_in_hours)
-    print('Time: ', time_in_hours)
+    _readable_time = datetime.timedelta(hours=time_in_hours)
+    print(f'Thread: {threading.current_thread().name}, state: {state}, time: {_readable_time}')
     sensor_values = {}
     sensor_values['hvac_electricity_watts'] = ep_api.exchange.get_variable_value(state,
                                                                            allHandles['sensor']['hvac_electricity_watts'])
@@ -171,39 +171,54 @@ def set_actuators(state, to_set):
     for i in range(len(allHandles['actuator']['Damper_Position'])):
         ep_api.exchange.set_actuator_value(state, allHandles['actuator']['Damper_Position'][i], to_set['Damper_Position'][i])
 def timeStepHandler(state):
-    global get_handle_bool
+    global get_handle_bool, eplastcalltime
     if not get_handle_bool:
         get_building_handles(state)
         get_handle_bool = True
     warm_up = ep_api.exchange.warmup_flag(state)
     if not warm_up:
-        # barrier_0.wait()
+        curr_sim_time_in_hours = ep_api.exchange.current_sim_time(state)
+        curr_sim_time_in_seconds = curr_sim_time_in_hours * 3600  # Should always accumulate, since system time always advances
+        threadName = threading.current_thread().name
+        eplastcalltime[threadName] = curr_sim_time_in_seconds
+
+        time_index_alignment_bool = 1 > abs(curr_sim_time_in_seconds - vcwg_needed_time_idx_in_seconds)
+        if not time_index_alignment_bool:
+            return
+        print(f'Thread: {threading.current_thread().name},barrier_0.n_waiting: {barrier_0.n_waiting}, barrier_1.n_waiting: {barrier_1.n_waiting}')
+        barrier_0.wait()
         sensor_values = get_sensor_value(state)
         #print thread info
-        print(f'Thread: {threading.current_thread().name}, state: {state}')
-        # barrier_1.wait()
+        #random sleep 1 - 5 seconds
+        # time.sleep(random.randint(1E-2))
+        barrier_1.wait()
 def init_idf():
-
     global ep_api, get_handle_bool
     get_handle_bool = False
     ep_api = EnergyPlusAPI()
     state = ep_api.state_manager.new_state()
-    ep_api.runtime.callback_after_predictor_before_hvac_managers(state, timeStepHandler)
+    ep_api.runtime.callback_end_system_timestep_after_hvac_reporting(state, timeStepHandler)
     ep_api.exchange.request_variable(state, "Site Outdoor Air Drybulb Temperature", "ENVIRONMENT")
     ep_api.exchange.request_variable(state, "Site Outdoor Air Humidity Ratio", "ENVIRONMENT")
     return state
 
 def one_idf_run(name):
+    global eplastcalltime
+    threadName = threading.current_thread().name
+    eplastcalltime[threadName] = 0
     state = init_idf()
     idfFilePath = 'RefBldgLargeOfficeNew2004_v1.4_7.2_5A_USA_IL_CHICAGO-OHARE_V2210.idf'
     weather_file_path = 'USA_IL_Chicago-OHare.Intl.AP.725300_TMY3.epw'
     output_path = f'./ep_trivial_output/{name}'
-    sys_args = ['-d', output_path, '-a','-w', weather_file_path, idfFilePath]
+    sys_args = ['-d', output_path,'-w', weather_file_path, idfFilePath]
     ep_api.runtime.run_energyplus(state, sys_args)
 
 def VCWG_EP_District():
-    global barrier_0, barrier_1, sem0
-    nb_idf = 1
+    global barrier_0, barrier_1, sem0, \
+        vcwg_needed_time_idx_in_seconds, eplastcalltime
+    nb_idf = 2
+    vcwg_needed_time_idx_in_seconds = 0
+    eplastcalltime = {}
     sem0 = threading.Semaphore(1)
     barrier_0 = Barrier(nb_idf + 1)
     barrier_1 = Barrier(nb_idf + 1)
@@ -211,21 +226,23 @@ def VCWG_EP_District():
         thread_idf = threading.Thread(target=one_idf_run, args=(i,))
         thread_idf.start()
 
-    # while True:
-    #     #timed semaphore wait 60 seconds
-    #     if not sem0.acquire(timeout=60):
-    #         print("VCWG: Timeout waiting for energy")
-    #         #end this function
-    #         return
-    #
-    #     print(f"VCWG: Uploading weather for time step")
-    #     # time.sleep(1)
-    #     barrier_0.wait()
-    #
-    #     barrier_1.wait()
-    #     print(f"VCWG: Downloading energy for time step")
-    #     # time.sleep(1)
-    #     sem0.release()
+    while True:
+        #timed semaphore wait 60 seconds
+        if not sem0.acquire(timeout=60):
+            print("VCWG: Timeout waiting for energy")
+            #end this function
+            return
+        vcwg_needed_time_idx_in_seconds += 600
+        print(f"VCWG: Uploading weather for time step")
+        # time.sleep(1)
+        print(f"VCWG: barrier_0.n_waiting: {barrier_0.n_waiting}, barrier_1.n_waiting: {barrier_1.n_waiting}")
+        barrier_0.wait()
+
+        barrier_1.wait()
+        print(f"VCWG: Downloading energy for time step")
+        # time.sleep(1)
+        sem0.release()
+
 
 if __name__ == '__main__':
     VCWG_EP_District()
