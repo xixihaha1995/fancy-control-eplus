@@ -1,4 +1,11 @@
 import datetime, sys, os, threading
+import time
+from multiprocessing import Barrier
+
+sys.path.insert(0, '/usr/local/EnergyPlus-22-1-0/')
+sys.path.insert(0, 'C:/EnergyPlusV22-2-0')
+from pyenergyplus.api import EnergyPlusAPI
+
 
 def get_zone_handles(state):
     global zone_names
@@ -163,28 +170,20 @@ def set_actuators(state, to_set):
     ep_api.exchange.set_actuator_value(state, allHandles['actuator']['RH_percent'], to_set['RH_percent'])
     for i in range(len(allHandles['actuator']['Damper_Position'])):
         ep_api.exchange.set_actuator_value(state, allHandles['actuator']['Damper_Position'][i], to_set['Damper_Position'][i])
-def api_to_csv(state):
-    orig = ep_api.exchange.list_available_api_data_csv(state)
-    newFileByteArray = bytearray(orig)
-    api_path = os.path.join(os.path.dirname(__file__), 'api_data.csv')
-    newFile = open(api_path, "wb")
-    newFile.write(newFileByteArray)
-    newFile.close()
 def timeStepHandler(state):
     global get_handle_bool
     if not get_handle_bool:
         get_building_handles(state)
         get_handle_bool = True
-        api_to_csv(state)
     warm_up = ep_api.exchange.warmup_flag(state)
     if not warm_up:
+        # barrier_0.wait()
         sensor_values = get_sensor_value(state)
         #print thread info
         print('Thread: ', threading.current_thread().name)
-def init():
-    sys.path.insert(0, '/usr/local/EnergyPlus-22-1-0/')
-    sys.path.insert(0, 'C:/EnergyPlusV22-1-0')
-    from pyenergyplus.api import EnergyPlusAPI
+        # barrier_1.wait()
+def init_idf():
+
     global ep_api, get_handle_bool
     get_handle_bool = False
     ep_api = EnergyPlusAPI()
@@ -194,33 +193,34 @@ def init():
     ep_api.exchange.request_variable(state, "Site Outdoor Air Humidity Ratio", "ENVIRONMENT")
     return state
 
-def main():
-    state = init()
+def one_idf_run(name):
+    state = init_idf()
     idfFilePath = 'RefBldgLargeOfficeNew2004_v1.4_7.2_5A_USA_IL_CHICAGO-OHARE.idf'
     weather_file_path = 'USA_IL_Chicago-OHare.Intl.AP.725300_TMY3.epw'
-    output_path = './ep_trivial'
-    sys_args = '-d', output_path, '-w', weather_file_path, idfFilePath
-    nbr_threads = 3
-    for i in range(nbr_threads):
-        t = threading.Thread(target=ep_api.runtime.run_energyplus, args=(state, sys_args))
-        t.start()
-    # ep_api.runtime.run_energyplus(state, sys_args)
+    output_path = f'./ep_trivial_output/{name}'
+    sys_args = ['-d', output_path, '-a','-w', weather_file_path, idfFilePath]
+    ep_api.runtime.run_energyplus(state, sys_args)
 
-def VCWG():
-    sem0.acquire()
-    #upload weather
-    barrier_0.wait()
+def VCWG_EP_District():
+    global barrier_0, barrier_1, sem0
+    nb_idf = 3
+    sem0 = threading.Semaphore(1)
+    barrier_0 = Barrier(nb_idf + 1)
+    barrier_1 = Barrier(nb_idf + 1)
+    for i in range(nb_idf):
+        thread_idf = threading.Thread(target=one_idf_run, args=(i,))
+        thread_idf.start()
 
-    barrier_1.wait()
-    #download energy
-    sem0.release()
-
-def ep():
-    barrier_0.wait()
-    #download weather
-    #upload energy
-    barrier_1.wait()
-
+    # while True:
+    #     sem0.acquire()
+    #     print(f"VCWG: Uploading weather for time step")
+    #     time.sleep(1)
+    #     barrier_0.wait()
+    #
+    #     barrier_1.wait()
+    #     print(f"VCWG: Downloading energy for time step")
+    #     time.sleep(1)
+    #     sem0.release()
 
 if __name__ == '__main__':
-    main()
+    VCWG_EP_District()
