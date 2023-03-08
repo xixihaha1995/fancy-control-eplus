@@ -67,7 +67,7 @@
   Version,22.1;
 
   SimulationControl,
-    YES,                     !- Do Zone Sizing Calculation
+    Yes,                     !- Do Zone Sizing Calculation
     YES,                     !- Do System Sizing Calculation
     YES,                     !- Do Plant Sizing Calculation
     NO,                      !- Run Simulation for Sizing Periods
@@ -240,7 +240,7 @@
     7,                       !- Shading Calculation Update Frequency
     15000;                   !- Maximum Figures in Shadow Overlap Calculations
 
-  Timestep,6;
+  Timestep,12;
 
 ! WeatherFileName=USA_IL_Chicago-OHare_TMY2.epw
 
