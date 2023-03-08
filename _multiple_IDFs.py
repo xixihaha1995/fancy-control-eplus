@@ -7,27 +7,26 @@ sys.path.insert(0, 'C:/EnergyPlusV22-1-0')
 from pyenergyplus.api import EnergyPlusAPI
 
 def run_vcwg():
-    global vcwg_needed_time_idx_in_seconds
+    global vcwg_needed_time_idx_in_seconds, weatherInfo,wasteHeat
     vcwg_needed_time_idx_in_seconds = 0
     while True:
-        if not sem0.acquire():
-            print("VCWG: Timeout waiting for energy")
-            return
-        vcwg_needed_time_idx_in_seconds += 300
-
-        barrier_0.wait()
-        print(f'VCWG: vcwg_needed_time_idx_in_seconds: {vcwg_needed_time_idx_in_seconds}'
-              f' eplastcalltime: {eplastcalltime}')
-        barrier_1.wait()
-        sem0.release()
+        with cond_pub:
+            while not all(item >= 0 for item in wasteHeat):
+                cond_pub.wait()
+            wasteHeat = {k: -1 for k in wasteHeat}
+            vcwg_needed_time_idx_in_seconds += 300
+            weatherInfo = 20 + random.randint(1, 10)
+            with cond_sub:
+                print(f"vcwg_needed_time_idx_in_seconds: {vcwg_needed_time_idx_in_seconds}, "
+                      f"ep_last_call_time: {eplastcalltime}")
+                cond_sub.notify_all()
 def timeStepHandler(state):
-    global eplastcalltime
+    global eplastcalltime,wasteHeat
 
     for _otherEPWarmed_vcwgCalled in call_thread.values():
         if not _otherEPWarmed_vcwgCalled:
             return
 
-    barrier_0.wait()
 
     curr_sim_time_in_hours = ep_api.exchange.current_sim_time(state)
     curr_sim_time_in_seconds = curr_sim_time_in_hours * 3600  # Should always accumulate, since system time always advances
@@ -35,17 +34,20 @@ def timeStepHandler(state):
     accumulated_time = curr_sim_time_in_seconds - eplastcalltime[threadName]
 
     time_index_alignment_bool = 1 > abs(accumulated_time - 300)
-    if not time_index_alignment_bool:
-        print(f'Thread: {threading.current_thread().name},'
-              f'accumulated_time: {accumulated_time}, '
-              f'eplastcalltime: {eplastcalltime}, '
-              f'vcwg_needed_time_idx_in_seconds: {vcwg_needed_time_idx_in_seconds}')
-        return
+    # if not time_index_alignment_bool:
+    #     print(f'Thread: {threading.current_thread().name},'
+    #           f'accumulated_time: {accumulated_time}, '
+    #           f'eplastcalltime: {eplastcalltime}, '
+    #           f'vcwg_needed_time_idx_in_seconds: {vcwg_needed_time_idx_in_seconds}')
+    #     return
     eplastcalltime[threadName] = curr_sim_time_in_seconds
 
+    wasteHeat[threadName] = 300 + random.randint(1, 10)
+    with cond_pub:
+        if all(waste >=0 for waste in wasteHeat.values()):
+            cond_pub.notify()
 
 
-    barrier_1.wait()
 def overwrite_ep_weather(state):
     global call_thread
     warm_up = ep_api.exchange.warmup_flag(state)
@@ -55,12 +57,18 @@ def overwrite_ep_weather(state):
         if not call_thread['vcwg']:
             threading.Thread(target=run_vcwg).start()
             call_thread['vcwg'] = True
+
+        with cond_sub:
+            while wasteHeat[_threadName] != -1:
+                cond_sub.wait()
+            print(f"EP-{_threadName}: Downloading weather {weatherInfo}")
+
 def one_idf_run(name):
-    global eplastcalltime,ep_api, call_thread, weatherInfo
+    global eplastcalltime,ep_api, call_thread,wasteHeat
     threadName = threading.current_thread().name
     eplastcalltime[threadName] = 0
     call_thread[threadName] = False
-    weatherInfo[threadName] = 0
+    wasteHeat[threadName] = 0
 
     ep_api = EnergyPlusAPI()
     state = ep_api.state_manager.new_state()
@@ -78,15 +86,18 @@ def one_idf_run(name):
 
 def Call_EP():
     global barrier_0, barrier_1, sem0, \
-        vcwg_needed_time_idx_in_seconds, eplastcalltime, call_thread,weatherInfo
+        vcwg_needed_time_idx_in_seconds, eplastcalltime, call_thread,weatherInfo,\
+        cond_pub, cond_sub, wasteHeat
     weatherInfo = {}
+    wasteHeat = {}
     nb_idf = 2
     call_thread = {}
     call_thread['vcwg'] = False
     vcwg_needed_time_idx_in_seconds = 0
     eplastcalltime = {}
     sem0 = threading.Semaphore(1)
-    cond = threading.Condition()
+    cond_pub = threading.Condition()
+    cond_sub = threading.Condition()
     barrier_0 = Barrier(nb_idf + 1)
     barrier_1 = Barrier(nb_idf + 1)
     for i in range(nb_idf):
