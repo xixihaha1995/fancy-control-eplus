@@ -6,7 +6,6 @@ sys.path.insert(0, '/usr/local/EnergyPlus-22-1-0/')
 sys.path.insert(0, 'C:/EnergyPlusV22-1-0')
 from pyenergyplus.api import EnergyPlusAPI
 
-
 def get_zone_handles(state):
     global zone_names
     zone_names = ['Basement',
@@ -163,13 +162,6 @@ def get_sensor_value(state):
             ep_api.exchange.get_variable_value(state, allHandles['sensor']['room_target_temp_c'][i]))
 
     return sensor_values
-def set_actuators(state, to_set):
-    ep_api.exchange.set_actuator_value(state, allHandles['actuator']['Chiler_SET_C'], to_set['Chiler_SET_C'])
-    ep_api.exchange.set_actuator_value(state, allHandles['actuator']['Boiler_SET_C'], to_set['Boiler_SET_C'])
-    ep_api.exchange.set_actuator_value(state, allHandles['actuator']['OAT_C'], to_set['OAT_C'])
-    ep_api.exchange.set_actuator_value(state, allHandles['actuator']['RH_percent'], to_set['RH_percent'])
-    for i in range(len(allHandles['actuator']['Damper_Position'])):
-        ep_api.exchange.set_actuator_value(state, allHandles['actuator']['Damper_Position'][i], to_set['Damper_Position'][i])
 def timeStepHandler(state):
     global get_handle_bool, eplastcalltime
     if not get_handle_bool:
@@ -216,7 +208,7 @@ def one_idf_run(name):
 def VCWG_EP_District():
     global barrier_0, barrier_1, sem0, \
         vcwg_needed_time_idx_in_seconds, eplastcalltime
-    nb_idf = 2
+    nb_idf = 1
     vcwg_needed_time_idx_in_seconds = 0
     eplastcalltime = {}
     sem0 = threading.Semaphore(1)
