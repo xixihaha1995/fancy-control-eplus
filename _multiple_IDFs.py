@@ -3,7 +3,7 @@ import time
 from multiprocessing import Barrier
 
 sys.path.insert(0, '/usr/local/EnergyPlus-22-1-0/')
-sys.path.insert(0, 'C:/EnergyPlusV22-2-0')
+sys.path.insert(0, 'C:/EnergyPlusV22-1-0')
 from pyenergyplus.api import EnergyPlusAPI
 
 
@@ -140,8 +140,8 @@ def get_building_handles(state):
     allHandles['actuator']['RH_percent'] = orh_actuator_handle
 def get_sensor_value(state):
     time_in_hours = ep_api.exchange.current_sim_time(state)
-    _readable_time = datetime.timedelta(hours=time_in_hours)
-    print('Time: ', _readable_time)
+    # _readable_time = datetime.timedelta(hours=time_in_hours)
+    print('Time: ', time_in_hours)
     sensor_values = {}
     sensor_values['hvac_electricity_watts'] = ep_api.exchange.get_variable_value(state,
                                                                            allHandles['sensor']['hvac_electricity_watts'])
@@ -180,7 +180,7 @@ def timeStepHandler(state):
         # barrier_0.wait()
         sensor_values = get_sensor_value(state)
         #print thread info
-        print('Thread: ', threading.current_thread().name)
+        print(f'Thread: {threading.current_thread().name}, state: {state}')
         # barrier_1.wait()
 def init_idf():
 
@@ -195,7 +195,7 @@ def init_idf():
 
 def one_idf_run(name):
     state = init_idf()
-    idfFilePath = 'RefBldgLargeOfficeNew2004_v1.4_7.2_5A_USA_IL_CHICAGO-OHARE.idf'
+    idfFilePath = 'RefBldgLargeOfficeNew2004_v1.4_7.2_5A_USA_IL_CHICAGO-OHARE_V2210.idf'
     weather_file_path = 'USA_IL_Chicago-OHare.Intl.AP.725300_TMY3.epw'
     output_path = f'./ep_trivial_output/{name}'
     sys_args = ['-d', output_path, '-a','-w', weather_file_path, idfFilePath]
@@ -203,7 +203,7 @@ def one_idf_run(name):
 
 def VCWG_EP_District():
     global barrier_0, barrier_1, sem0
-    nb_idf = 3
+    nb_idf = 1
     sem0 = threading.Semaphore(1)
     barrier_0 = Barrier(nb_idf + 1)
     barrier_1 = Barrier(nb_idf + 1)
@@ -212,14 +212,19 @@ def VCWG_EP_District():
         thread_idf.start()
 
     # while True:
-    #     sem0.acquire()
+    #     #timed semaphore wait 60 seconds
+    #     if not sem0.acquire(timeout=60):
+    #         print("VCWG: Timeout waiting for energy")
+    #         #end this function
+    #         return
+    #
     #     print(f"VCWG: Uploading weather for time step")
-    #     time.sleep(1)
+    #     # time.sleep(1)
     #     barrier_0.wait()
     #
     #     barrier_1.wait()
     #     print(f"VCWG: Downloading energy for time step")
-    #     time.sleep(1)
+    #     # time.sleep(1)
     #     sem0.release()
 
 if __name__ == '__main__':
