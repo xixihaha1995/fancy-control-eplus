@@ -25,16 +25,31 @@ def timeStepHandler(state):
     if not _converge:
         return
     eplastcalltime[threadName] = curr_sim_time_in_seconds
+    print(f'EP {threadName} call time: {curr_sim_time_in_seconds}')
+    sem1.acquire()
     wasteHeat[threadName] = 300 + random.randint(1, 10)
-    semDict[(int(threadName) + 2) % len(semDict)].release()
+    print(f'{threadName},'
+          f'vcwg_needed_time_idx_in_seconds: {vcwg_needed_time_idx_in_seconds},'
+          f'wasteHeat: {wasteHeat},'
+          f'eplastcalltime: {eplastcalltime}')
+    with cond_waste:
+        _wasteHeatReady = all([v > 0 for v in wasteHeat.values()])
+        while not (_wasteHeatReady):
+            cond_waste.wait()
+            break
+    with cond_waste:
+        cond_waste.notify_all()
+    with cond_pub:
+        cond_pub.notify_all()
 def overwrite_ep_weather(state):
     global call_thread
     warm_up = ep_api.exchange.warmup_flag(state)
     if not warm_up:
         _threadName = threading.current_thread().name
         call_thread[_threadName] = True
-        semDict[(int(_threadName) + 1) % len(semDict)].acquire()
 
+        curr_sim_time_in_hours = ep_api.exchange.current_sim_time(state)
+        curr_sim_time_in_seconds = curr_sim_time_in_hours * 3600
 
 def one_idf_run(name):
     state = ep_api.state_manager.new_state()
@@ -53,16 +68,10 @@ def one_idf_run(name):
 def Call_EP():
     global vcwg_needed_time_idx_in_seconds, eplastcalltime, call_thread,weatherInfo,\
         cond_pub, cond_sub, wasteHeat,ep_api,cond_mid, lock_pub,barrier,cond_waste,\
-        sem0,sem1,sem2,nb_idf,barrierEng, semDict
-
+        sem0,sem1,sem2,nb_idf,barrierEng
     weatherInfo = {}
     wasteHeat = {}
-    nb_idf = 3
-    semDict = [0 for i in range(nb_idf + 2)]
-    for i in range(nb_idf +2):
-        semDict[i] = threading.Semaphore(0)
-    semDict[0] = threading.Semaphore(1)
-
+    nb_idf = 1
     call_thread = {}
     call_thread['vcwg'] = False
     vcwg_needed_time_idx_in_seconds = 0
@@ -79,7 +88,7 @@ def Call_EP():
     barrierEng = Barrier(nb_idf + 1)
     ep_api = EnergyPlusAPI()
     for i in range(nb_idf):
-        _tmpEPName = f'{i}'
+        _tmpEPName = f'EP-{i}'
         eplastcalltime[_tmpEPName] = 0
         call_thread[_tmpEPName] = False
         wasteHeat[_tmpEPName] = -1
@@ -90,15 +99,21 @@ def run_vcwg():
     global vcwg_needed_time_idx_in_seconds, weatherInfo,wasteHeat
     vcwg_needed_time_idx_in_seconds = 300
     while True:
-        semDict[0].acquire()
-        print(f'vcwg download wasteHeat: {wasteHeat}')
+        sem0.acquire()
         wasteHeat = {k: -1 for k in wasteHeat}
-        semDict[1].release()
-        
-        semDict[-1].acquire()
-        vcwg_needed_time_idx_in_seconds += 300
         print(f'vcwg upload time: {vcwg_needed_time_idx_in_seconds}')
-        semDict[0].release()
+        for _ in range(nb_idf):
+            sem1.release()
+        with cond_pub:
+            _timeAlign = time_align_check(eplastcalltime, vcwg_needed_time_idx_in_seconds)
+            _wasteHeatReady = all([v > 0 for v in wasteHeat.values()])
+            while not (_wasteHeatReady):
+                cond_pub.wait()
+                _wasteHeatReady = all([v > 0 for v in wasteHeat.values()])
+                _timeAlign = time_align_check(eplastcalltime, vcwg_needed_time_idx_in_seconds)
+        print(f'vcwg download wasteHeat: {wasteHeat}')
+        vcwg_needed_time_idx_in_seconds += 300
+        sem0.release()
 
 if __name__ == '__main__':
     run_vcwg()
