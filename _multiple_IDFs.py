@@ -24,13 +24,19 @@ def timeStepHandler(state):
     _converge = 2 > abs(accumulated_time - 300)
     if not _converge:
         return
-    print(f'current time: {curr_sim_time_in_seconds},'
-          f'vcwg needed time: {vcwg_needed_time_idx_in_seconds},'
-          f'eplastcalltime: {eplastcalltime},')
-    barrier.wait()
+    # print(f'current time: {curr_sim_time_in_seconds},'
+    #       f'vcwg needed time: {vcwg_needed_time_idx_in_seconds},'
+    #       f'eplastcalltime: {eplastcalltime},')
     eplastcalltime[threadName] = curr_sim_time_in_seconds
-    wasteHeat[threadName] = 300 + random.randint(1, 10)
-    # cond_pub.notify_all()
+    with cond_sub:
+        _alighmentBool = time_align_check(eplastcalltime, vcwg_needed_time_idx_in_seconds)
+        while not _alighmentBool:
+            cond_sub.wait()
+            _alighmentBool = time_align_check(eplastcalltime, vcwg_needed_time_idx_in_seconds)
+        wasteHeat[threadName] = 300 + random.randint(1, 10)
+        print(f'thread: {threadName}, wasteHeat: {wasteHeat},')
+        with cond_pub:
+            cond_pub.notify_all()
 
 def overwrite_ep_weather(state):
     global call_thread
@@ -61,7 +67,7 @@ def Call_EP():
         cond_pub, cond_sub, wasteHeat,ep_api,cond_mid, lock_pub,barrier
     weatherInfo = {}
     wasteHeat = {}
-    nb_idf = 2
+    nb_idf = 1
     call_thread = {}
     call_thread['vcwg'] = False
     vcwg_needed_time_idx_in_seconds = 0
@@ -84,22 +90,20 @@ def run_vcwg():
     global vcwg_needed_time_idx_in_seconds, weatherInfo,wasteHeat
     vcwg_needed_time_idx_in_seconds = 300
     while True:
-        barrier.wait()
-        barrier.reset()
-        vcwg_needed_time_idx_in_seconds += 300
         wasteHeat = {k: -1 for k in wasteHeat}
         weatherInfo = 20 + random.randint(1, 10)
-        # with cond_pub:
+        with cond_pub:
         #     _alignmentBool = time_align_check(eplastcalltime, vcwg_needed_time_idx_in_seconds)
-        #     _wasteHeatBool = all(item >= 0 for item in wasteHeat.values())
-        #     while not (_wasteHeatBool and _alignmentBool):
-        #         cond_pub.wait()
+            _wasteHeatBool = all(item >= 0 for item in wasteHeat.values())
+            while not (_wasteHeatBool ):
+                cond_pub.wait()
         #         _alignmentBool = time_align_check(eplastcalltime, vcwg_needed_time_idx_in_seconds)
-        #         _wasteHeatBool = all(item >= 0 for item in wasteHeat.values())
-        #     vcwg_needed_time_idx_in_seconds += 300
-        #     wasteHeat = {k: -1 for k in wasteHeat}
-        #     weatherInfo = 20 + random.randint(1, 10)
-        #     cond_pub.notify_all()
+                _wasteHeatBool = all(item >= 0 for item in wasteHeat.values())
+            wasteHeat = {k: -1 for k in wasteHeat}
+            with cond_sub:
+                vcwg_needed_time_idx_in_seconds += 300
+                weatherInfo = 20 + random.randint(1, 10)
+                cond_sub.notify_all()
 
 if __name__ == '__main__':
     run_vcwg()
