@@ -231,7 +231,7 @@
     6;                       !- Timesteps in Averaging Window
 
   ConvergenceLimits,
-    2,                       !- Minimum System Timestep {minutes}
+    0,                       !- Minimum System Timestep {minutes}
     25;                      !- Maximum HVAC Iterations
 
   ShadowCalculation,
@@ -240,7 +240,7 @@
     7,                       !- Shading Calculation Update Frequency
     15000;                   !- Maximum Figures in Shadow Overlap Calculations
 
-  Timestep,12;
+  Timestep,2;
 
 ! WeatherFileName=USA_IL_Chicago-OHare_TMY2.epw
 
