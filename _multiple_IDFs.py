@@ -27,11 +27,21 @@ def timeStepHandler(state):
     eplastcalltime[threadName] = curr_sim_time_in_seconds
     sem1.acquire()
     wasteHeat[threadName] = 300 + random.randint(1, 10)
-    sem2.release()
-    # print(f'{threadName},'
-    #       f'vcwg_needed_time_idx_in_seconds: {vcwg_needed_time_idx_in_seconds},'
-    #       f'wasteHeat: {wasteHeat},'
-    #       f'eplastcalltime: {eplastcalltime}')
+    print(f'{threadName},'
+          f'vcwg_needed_time_idx_in_seconds: {vcwg_needed_time_idx_in_seconds},'
+          f'wasteHeat: {wasteHeat},'
+          f'eplastcalltime: {eplastcalltime}')
+    with cond_pub:
+        _timeAlign = time_align_check(eplastcalltime, vcwg_needed_time_idx_in_seconds)
+        _wasteHeatReady = all([v > 0 for v in wasteHeat.values()])
+        while not (_wasteHeatReady):
+            cond_pub.wait()
+            _timeAlign = time_align_check(eplastcalltime, vcwg_needed_time_idx_in_seconds)
+            _wasteHeatReady = all([v > 0 for v in wasteHeat.values()])
+    with cond_pub:
+        cond_pub.notify_all()
+    # sem2.release()
+
     # with cond_pub:
     #     #wait for all wasteHeat > 0
     #     cond_pub.wait_for(lambda: all([v > 0 for v in wasteHeat.values()]))
@@ -67,7 +77,7 @@ def Call_EP():
         sem0,sem1,sem2,nb_idf,barrierEng
     weatherInfo = {}
     wasteHeat = {}
-    nb_idf = 2
+    nb_idf = 1
     call_thread = {}
     call_thread['vcwg'] = False
     vcwg_needed_time_idx_in_seconds = 0
@@ -96,14 +106,21 @@ def run_vcwg():
     vcwg_needed_time_idx_in_seconds = 300
     while True:
         sem0.acquire()
-        vcwg_needed_time_idx_in_seconds += 300
         wasteHeat = {k: -1 for k in wasteHeat}
         # print(f'vcwg upload time: {vcwg_needed_time_idx_in_seconds}')
         for _ in range(nb_idf):
             sem1.release()
 
-        for _ in range(nb_idf):
-            sem2.acquire()
+        with cond_pub:
+            _timeAlign = time_align_check(eplastcalltime, vcwg_needed_time_idx_in_seconds)
+            _wasteHeatReady = all([v > 0 for v in wasteHeat.values()])
+            while not (_wasteHeatReady):
+                cond_pub.wait()
+                _timeAlign = time_align_check(eplastcalltime, vcwg_needed_time_idx_in_seconds)
+                _wasteHeatReady = all([v > 0 for v in wasteHeat.values()])
+        vcwg_needed_time_idx_in_seconds += 300
+        # for _ in range(nb_idf):
+        #     sem2.acquire()
         print(f'vcwg download wasteHeat: {wasteHeat}')
         sem0.release()
 
