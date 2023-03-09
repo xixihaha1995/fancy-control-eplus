@@ -206,20 +206,19 @@ def main():
         t.start()
     # ep_api.runtime.run_energyplus(state, sys_args)
 
-def VCWG():
-    sem0.acquire()
-    #upload weather
-    barrier_0.wait()
-
-    barrier_1.wait()
-    #download energy
-    sem0.release()
-
-def ep():
-    barrier_0.wait()
-    #download weather
-    #upload energy
-    barrier_1.wait()
+def publishers():
+    with cond:
+        cond.wait_for(_ceratin_pub_bool)
+def subscriber():
+    with cond:
+        #to change something
+        cond_pub.wait_for(_ceratin_pub_bool)
+def subscriber():
+    with cond_sub:
+        cond_sub.wait_for(_ceratin_sub_bool)
+        global_queue.get()
+        with cond_pub:
+            cond_pub.notify_all()
 
 
 if __name__ == '__main__':
