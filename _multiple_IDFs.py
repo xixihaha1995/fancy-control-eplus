@@ -57,11 +57,11 @@ def Call_EP():
 
     weatherInfo = {}
     wasteHeat = {}
-    nb_idf = 1
-    semDict = [0 for i in range(nb_idf + 1)]
-    for i in range(nb_idf +1):
+    nb_idf = 3
+    semDict = [0 for i in range(nb_idf + 2)]
+    for i in range(nb_idf +2):
         semDict[i] = threading.Semaphore(0)
-    semDict[i] = threading.Semaphore(1)
+    semDict[0] = threading.Semaphore(1)
 
     call_thread = {}
     call_thread['vcwg'] = False
