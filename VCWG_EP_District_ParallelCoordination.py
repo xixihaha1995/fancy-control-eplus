@@ -18,7 +18,7 @@ def timeStepHandler(state):
     _converge = 2 > abs(accumulated_time - 30 * 60)
     print(f'HVAC detecting convergence,{_converge},'
           f'curr_sim_time_in_seconds: {curr_sim_time_in_seconds},'
-          f'eplastcalltime[threadName]: {eplastcalltimexl[threadName]}')
+          f'eplastcalltime[threadName]: {eplastcalltime[threadName]}')
     if not _converge:
         return
     eplastcalltime[threadName] = curr_sim_time_in_seconds
