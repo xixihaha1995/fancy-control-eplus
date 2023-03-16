@@ -91,7 +91,7 @@
     1,                       !- Begin Day of Month
     ,                        !- Begin Year
     6,                       !- End Month
-    30,                      !- End Day of Month
+    3,                      !- End Day of Month
     ,                        !- End Year
     Sunday,                  !- Day of Week for Start Day
     No,                      !- Use Weather File Holidays and Special Days
@@ -231,7 +231,7 @@
     6;                       !- Timesteps in Averaging Window
 
   ConvergenceLimits,
-    2,                       !- Minimum System Timestep {minutes}
+    0,                       !- Minimum System Timestep {minutes}
     25;                      !- Maximum HVAC Iterations
 
   ShadowCalculation,
@@ -240,7 +240,7 @@
     7,                       !- Shading Calculation Update Frequency
     15000;                   !- Maximum Figures in Shadow Overlap Calculations
 
-  Timestep,6;
+  Timestep,12;
 
 ! WeatherFileName=USA_IL_Chicago-OHare_TMY2.epw
 

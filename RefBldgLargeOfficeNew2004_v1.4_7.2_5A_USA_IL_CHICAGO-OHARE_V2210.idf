@@ -240,7 +240,7 @@
     7,                       !- Shading Calculation Update Frequency
     15000;                   !- Maximum Figures in Shadow Overlap Calculations
 
-  Timestep,2;
+  Timestep,12;
 
 ! WeatherFileName=USA_IL_Chicago-OHare_TMY2.epw
 

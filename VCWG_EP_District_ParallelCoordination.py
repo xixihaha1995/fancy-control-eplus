@@ -2,7 +2,7 @@ import datetime, sys, os, threading
 import time, random
 from multiprocessing import Barrier
 
-sys.path.insert(0, '/usr/local/EnergyPlus-22-1-0/')
+sys.path.insert(0, '/usr/local/EnergyPlus-22-2-0/')
 sys.path.insert(0, 'C:/EnergyPlusV22-1-0')
 from pyenergyplus.api import EnergyPlusAPI
 
@@ -15,21 +15,25 @@ def timeStepHandler(state):
     curr_sim_time_in_seconds = curr_sim_time_in_hours * 3600
     _round = round(curr_sim_time_in_seconds)
     accumulated_time = curr_sim_time_in_seconds - eplastcalltime[threadName]
-    _converge = 2 > abs(accumulated_time - 30 * 60)
-    print(f'HVAC detecting convergence,{_converge},'
-          f'curr_sim_time_in_seconds: {curr_sim_time_in_seconds},'
-          f'eplastcalltime[threadName]: {eplastcalltime[threadName]}')
+    _zone_time_seconds = ep_api.exchange.zone_time_step(state) * 3600
+    _converge = round(abs(accumulated_time)) % (_zone_time_seconds) == 0
+    print(f'EP-{threadName} timeStepHandler, curr_sim_time_in_seconds: {curr_sim_time_in_seconds}')
     if not _converge:
+        print(f'EP-{threadName} not converged, curr_sim_time_in_seconds: {curr_sim_time_in_seconds}')
         return
     eplastcalltime[threadName] = curr_sim_time_in_seconds
+    print(f'EP-{threadName} converged, curr_sim_time_in_seconds: {curr_sim_time_in_seconds}')
     with cond_mid:
         _bool = ep_to_get_waste_check(shared_dict, threadName)
         while not _bool:
+            print(f'HVAC detecting convergence,{_converge},'
+                  f'curr_sim_time_in_seconds: {curr_sim_time_in_seconds},'
+                  f'eplastcalltime[threadName]: {eplastcalltime[threadName]}')
             cond_mid.wait()
             _bool = ep_to_get_waste_check(shared_dict, threadName)
-        shared_dict[threadName]['wasteHeat'] = 300 + random.randint(1, 10)
         shared_dict[threadName]['status'] = 'to_upload_wasteHeat'
-    with cond_mid:
+        shared_dict[threadName]['wasteHeat'] = 300 + random.randint(1, 10)
+        shared_dict[threadName]['time'] = curr_sim_time_in_seconds
         cond_mid.notify_all()
 def overwrite_ep_weather(state):
     global call_thread, eplastcalltime_over, shared_dict
@@ -42,24 +46,24 @@ def overwrite_ep_weather(state):
         curr_sim_time_in_seconds = curr_sim_time_in_hours * 3600
 
         accumulated_time = curr_sim_time_in_seconds - eplastcalltime_over[threadName]
-        _converge = round(abs(accumulated_time)) %(30 * 60) ==0 or abs(accumulated_time) > 1E4
-        print(f'detecting convergence,{_converge},'
-              f'curr_sim_time_in_seconds: {curr_sim_time_in_seconds},'
-              f'eplastcalltime_over[threadName]: {eplastcalltime_over[threadName]}')
+        _zone_time_seconds = ep_api.exchange.zone_time_step(state) * 3600
+        _converge = round(abs(accumulated_time)) % (_zone_time_seconds) == 0 or abs(accumulated_time) > 1E4
         if not _converge:
+            print(f'EP-{threadName} Overwrite not converged, curr_sim_time_in_seconds: {curr_sim_time_in_seconds}')
             return
-        eplastcalltime_over[threadName] = curr_sim_time_in_seconds
+        print(f'EP-{threadName} Overwrite converged, curr_sim_time_in_seconds: {curr_sim_time_in_seconds}')
+        eplastcalltime_over[threadName] = 300 if abs(accumulated_time) > 1E4 else curr_sim_time_in_seconds
 
         with cond_mid:
             _bool = ep_weather_overwrite_check(shared_dict, threadName)
             while not _bool:
+                print(f'detecting {threadName} convergence,{_converge},'
+                      f'curr_sim_time_in_seconds: {curr_sim_time_in_seconds},'
+                      f'shared_dict {shared_dict}')
                 cond_mid.wait()
                 _bool = ep_weather_overwrite_check(shared_dict, threadName)
-            print(f'EP {threadName} call time: {curr_sim_time_in_seconds},'
-                  f'weatherInfo: {weatherInfo},')
-            shared_dict[threadName]['time'] = curr_sim_time_in_seconds
             shared_dict[threadName]['status'] = 'to_get_wasteHeat'
-        with cond_mid:
+            print(f'EP-{threadName} Overwrite passed, curr_sim_time_in_seconds: {curr_sim_time_in_seconds}')
             cond_mid.notify_all()
 
 def one_idf_run(name):
@@ -70,6 +74,7 @@ def one_idf_run(name):
     ep_api.exchange.request_variable(state, "Site Outdoor Air Humidity Ratio", "ENVIRONMENT")
 
     idfFilePath = 'RefBldgLargeOfficeNew2004_v1.4_7.2_5A_USA_IL_CHICAGO-OHARE_V2210.idf'
+    idfFilePath = 'RefBldgLargeOfficeNew2004_v1.4_7.2_5A_USA_IL_CHICAGO-OHARE.idf'
     weather_file_path = 'USA_IL_Chicago-OHare.Intl.AP.725300_TMY3.epw'
     output_path = f'./ep_trivial_output/{name}'
     sys_args = ['-d', output_path,'-w', weather_file_path, idfFilePath]
@@ -103,7 +108,7 @@ def Call_EP():
         call_thread[_tmpEPName] = False
         wasteHeat[_tmpEPName] = -1
         _tmpDict = {}
-        _tmpDict['time'] = 300
+        _tmpDict['time'] = 0
         _tmpDict['wasteHeat'] = -1
         _tmpDict['status'] = 'to_generate_weather'
         shared_dict[_tmpEPName] = _tmpDict
@@ -126,14 +131,23 @@ def vcwg_download_wasteHeat_check(dict):
             return False
     return True
 def ep_weather_overwrite_check(dict, _threadName):
-    if dict[_threadName]['status'] == 'to_overwrite_weather':
-        return True
+    if dict[_threadName]['status'] == 'to_overwrite_weather' and \
+        abs(300 + dict[_threadName]['time'] - dict['vcwg_time']) <2:
+        for key, value in dict.items():
+            if key == 'vcwg_time' or key == 'weatherInfo':
+                continue
+            if abs(300 + dict[key]['time'] - dict['vcwg_time']) <2:
+                return True
     else:
-        # print(f'ep_weather_overwrite_check: {dict}')
         return False
 def ep_to_get_waste_check(dict, _threadName):
-    if dict[_threadName]['status'] == 'to_get_wasteHeat':
-        return True
+    if dict[_threadName]['status'] == 'to_get_wasteHeat' and \
+        abs(300 + dict[_threadName]['time'] - dict['vcwg_time']) <2:
+        for key, value in dict.items():
+            if key == 'vcwg_time' or key == 'weatherInfo':
+                continue
+            if abs(300 + dict[key]['time'] - dict['vcwg_time']) < 2:
+                return True
     else:
         # print(f'ep_to_get_waste_check: {dict}')
         return False
@@ -149,14 +163,15 @@ def run_vcwg():
                 cond_mid.wait()
                 _bool = vcwg_generate_weather_check(shared_dict)
             # cond_mid.wait_for(lambda: vcwg_generate_weather_check(shared_dict))
-            shared_dict['vcwg_time'] += 30 * 60
+            shared_dict['vcwg_time'] += 300
             shared_dict['weatherInfo'] = 25 + random.randint(1, 10)
+
             for key, value in shared_dict.items():
                 if key != 'vcwg_time' and key != 'weatherInfo':
                     value['status'] = 'to_overwrite_weather'
+
             print(f'VCWG to generate weather,'
                   f'shared_dict: {shared_dict}')
-        with cond_mid:
             cond_mid.notify_all()
 
         with cond_mid:
@@ -164,14 +179,13 @@ def run_vcwg():
             while not _bool:
                 cond_mid.wait()
                 _bool = vcwg_download_wasteHeat_check(shared_dict)
-            # cond_mid.wait_for(lambda: vcwg_download_wasteHeat_check(shared_dict))
+
             for key, value in shared_dict.items():
                 if key != 'vcwg_time' and key != 'weatherInfo':
                     value['wasteHeat'] = -1
                     value['status'] = 'to_generate_weather'
             print(f'VCWG to download wasteHeat,'
                   f'shared_dict: {shared_dict}')
-        with cond_mid:
             cond_mid.notify_all()
 
 

@@ -25,6 +25,8 @@ def timeStepHandler(state):
     eplastcalltime[threadName] = curr_sim_time_in_seconds
     epsequnces[threadName] += 1
     print('HVACReport', threadName, epsequnces[threadName])
+    shared_dict[threadName]['wasteHeat'] = 300 + random.randint(1, 10)
+    barrierEPUpBEM.wait()
 def overwrite_ep_weather(state):
     global call_thread, eplastcalltime_over, shared_dict
     warm_up = ep_api.exchange.warmup_flag(state)
@@ -43,7 +45,9 @@ def overwrite_ep_weather(state):
         #       f'eplastcalltime_over[threadName]: {eplastcalltime_over[threadName]}')
         if not _converge:
             return
+        barrierVCWGUpWeather.wait()
         eplastcalltime_over[threadName] = curr_sim_time_in_seconds
+        shared_dict[threadName]['time'] = curr_sim_time_in_seconds
         epsequnces[threadName] += 1
         print('Set current weather', threadName, epsequnces[threadName])
 
@@ -63,8 +67,8 @@ def one_idf_run(name):
 
 def Call_EP():
     global eplastcalltime, eplastcalltime_over,epsequnces,call_thread,weatherInfo,\
-        cond_pub, cond_sub, wasteHeat,ep_api,cond_mid, lock_pub,barrier,cond_waste,\
-        sem0,sem1,sem2,nb_idf,barrierEng, shared_dict,cond_0,cond_1,cond_2,cond_3
+        cond_pub, cond_sub, wasteHeat,ep_api,cond_mid, lock_pub,cond_waste,\
+        sem0,sem1,sem2,nb_idf,barrierVCWGUpWeather, barrierEPUpBEM, shared_dict,cond_0,cond_1,cond_2,cond_3
 
     nb_idf = 2
     shared_dict = {}
@@ -80,8 +84,8 @@ def Call_EP():
     cond_3 = threading.Condition()
     weatherInfo = {}
     wasteHeat = {}
-    barrier = Barrier(nb_idf)
-    barrierEng = Barrier(nb_idf + 1)
+    barrierVCWGUpWeather = Barrier(1 + nb_idf)
+    barrierEPUpBEM = Barrier(nb_idf + 1)
     ep_api = EnergyPlusAPI()
     for i in range(nb_idf):
         _tmpEPName = f'EP-{i}'
@@ -103,6 +107,20 @@ def run_vcwg():
     global shared_dict
     shared_dict['vcwg_time'] = 0
     shared_dict['weatherInfo'] = 25 + random.randint(1, 10)
+    while True:
+        print(f'VCWG to generate weather,'
+              f'shared_dict: {shared_dict}')
+        barrierVCWGUpWeather.wait()
+        barrierVCWGUpWeather.reset()
+
+        barrierEPUpBEM.wait()
+        barrierEPUpBEM.reset()
+        print(f'VCWG to download wasteHeat,'
+              f'shared_dict: {shared_dict}')
+        shared_dict['vcwg_time'] += 300
+        for key, value in shared_dict.items():
+            if key != 'vcwg_time' and key != 'weatherInfo':
+                value['wasteHeat'] = -1
 
 if __name__ == '__main__':
     run_vcwg()

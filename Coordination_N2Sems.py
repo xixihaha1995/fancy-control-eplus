@@ -25,6 +25,8 @@ def timeStepHandler(state):
     eplastcalltime[threadName] = curr_sim_time_in_seconds
     epsequnces[threadName] += 1
     print('HVACReport', threadName, epsequnces[threadName])
+    shared_dict[threadName]['wasteHeat'] = 300 + random.randint(1, 10)
+    sem_vcwg_1.release()
 def overwrite_ep_weather(state):
     global call_thread, eplastcalltime_over, shared_dict
     warm_up = ep_api.exchange.warmup_flag(state)
@@ -43,7 +45,9 @@ def overwrite_ep_weather(state):
         #       f'eplastcalltime_over[threadName]: {eplastcalltime_over[threadName]}')
         if not _converge:
             return
+        sem_buildings[threadName].acquire()
         eplastcalltime_over[threadName] = curr_sim_time_in_seconds
+        shared_dict[threadName]['time'] = curr_sim_time_in_seconds
         epsequnces[threadName] += 1
         print('Set current weather', threadName, epsequnces[threadName])
 
@@ -63,8 +67,9 @@ def one_idf_run(name):
 
 def Call_EP():
     global eplastcalltime, eplastcalltime_over,epsequnces,call_thread,weatherInfo,\
-        cond_pub, cond_sub, wasteHeat,ep_api,cond_mid, lock_pub,barrier,cond_waste,\
-        sem0,sem1,sem2,nb_idf,barrierEng, shared_dict,cond_0,cond_1,cond_2,cond_3
+        cond_pub, cond_sub, wasteHeat,ep_api,cond_mid, lock_pub,cond_waste,\
+        nb_idf,barrierVCWGUpWeather, barrierEPUpBEM, shared_dict,cond_0,cond_1,cond_2,cond_3,\
+        sem_vcwg_0,sem_vcwg_1,sem_buildings
 
     nb_idf = 2
     shared_dict = {}
@@ -78,10 +83,14 @@ def Call_EP():
     cond_1 = threading.Condition()
     cond_2 = threading.Condition()
     cond_3 = threading.Condition()
+    sem_vcwg_0 = threading.Semaphore(1)
+    sem_vcwg_1 = threading.Semaphore(0)
+    sem_buildings = {}
+
     weatherInfo = {}
     wasteHeat = {}
-    barrier = Barrier(nb_idf)
-    barrierEng = Barrier(nb_idf + 1)
+    barrierVCWGUpWeather = Barrier(1 + nb_idf)
+    barrierEPUpBEM = Barrier(nb_idf + 1)
     ep_api = EnergyPlusAPI()
     for i in range(nb_idf):
         _tmpEPName = f'EP-{i}'
@@ -90,6 +99,7 @@ def Call_EP():
         epsequnces[_tmpEPName] = 0
         call_thread[_tmpEPName] = False
         wasteHeat[_tmpEPName] = -1
+        sem_buildings[_tmpEPName] = threading.Semaphore(0)
         _tmpDict = {}
         _tmpDict['time'] = 300
         _tmpDict['wasteHeat'] = -1
@@ -103,6 +113,23 @@ def run_vcwg():
     global shared_dict
     shared_dict['vcwg_time'] = 0
     shared_dict['weatherInfo'] = 25 + random.randint(1, 10)
+    while True:
+        print(f'VCWG to generate weather,'
+              f'shared_dict: {shared_dict}')
+        sem_vcwg_0.acquire()
+        for k,v  in enumerate(sem_buildings.values()):
+            v.release()
+
+        for _ in range(nb_idf):
+            sem_vcwg_1.acquire()
+        print(f'VCWG to download wasteHeat,'
+              f'shared_dict: {shared_dict}')
+        shared_dict['vcwg_time'] += 300
+        for key, value in shared_dict.items():
+            if key != 'vcwg_time' and key != 'weatherInfo':
+                value['wasteHeat'] = -1
+
+        sem_vcwg_0.release()
 
 if __name__ == '__main__':
     run_vcwg()
